@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>XOR ENC — One-Time Pad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e0f;--bg2:#161618;--bg3:#1e1e21;--bg4:#252529;
+  --border:#2e2e33;--border2:#3e3e45;
+  --text:#f0efe8;--text2:#9998a0;--text3:#5c5b63;
+  --green:#1D9E75;--green-bg:#0a2018;
+  --amber:#EF9F27;--amber-bg:#1e1500;
+  --red:#E24B4A;--red-bg:#1e0808;
+  --blue:#378ADD;--blue-bg:#071828;
+  --purple:#9b7fe8;--purple-bg:#150f2a;--purple2:#7c5fe0;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;line-height:1.6}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.5}
+.wrap{position:relative;z-index:1;max-width:700px;margin:0 auto;padding:3rem 1.25rem 5rem}
+
+/* LANG */
+.lang-bar{display:flex;gap:6px;justify-content:flex-end;margin-bottom:2.5rem;flex-wrap:wrap}
+.lang-btn{padding:4px 10px;border:0.5px solid var(--border);border-radius:20px;background:transparent;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all .15s}
+.lang-btn:hover{border-color:var(--border2);color:var(--text)}
+.lang-btn.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+
+/* HEADER */
+.header{margin-bottom:2.5rem}
+.logo{display:flex;align-items:center;gap:14px;margin-bottom:.6rem}
+.logo-icon{width:44px;height:44px;background:var(--purple);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-icon svg{width:24px;height:24px}
+.logo-text{}
+h1{font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1}
+.logo-sub{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--purple);margin-top:2px}
+.tagline{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text3);margin-top:.4rem}
+
+/* SECURITY BADGE */
+.security-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:20px;
+  border:1px solid var(--purple);background:var(--purple-bg);
+  font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--purple);margin-bottom:1.5rem;
+}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--purple);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* BANNERS */
+.banner{border:1px solid;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.25rem;display:flex;gap:12px;align-items:flex-start}
+.b-purple{border-color:var(--purple);background:var(--purple-bg)}
+.b-amber{border-color:var(--amber);background:var(--amber-bg)}
+.b-red{border-color:var(--red);background:var(--red-bg)}
+.banner-icon{font-size:18px;flex-shrink:0;margin-top:1px;line-height:1}
+.banner-title{font-size:12px;font-weight:700;letter-spacing:.5px;margin-bottom:4px}
+.bt-purple{color:var(--purple)} .bt-amber{color:var(--amber)} .bt-red{color:var(--red)}
+.banner-text{font-size:12px;line-height:1.65;font-family:'JetBrains Mono',monospace}
+.bx-purple{color:#7a63c0} .bx-amber{color:#b88a30} .bx-red{color:#b04040}
+
+/* CARD */
+.card{background:var(--bg2);border:0.5px solid var(--border);border-radius:14px;padding:1.25rem;margin-bottom:1rem}
+.card-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:.85rem}
+
+/* DROP */
+.drop-zone{border:1.5px dashed var(--border2);border-radius:10px;padding:2.5rem 1rem;text-align:center;cursor:pointer;transition:all .15s;position:relative}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--purple);background:var(--purple-bg)}
+.drop-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:32px;margin-bottom:10px;display:block}
+.drop-text{font-size:14px;color:var(--text2);line-height:1.7}
+.drop-text strong{color:var(--text);font-weight:700}
+.drop-hint{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:5px;display:block}
+
+/* FILE LIST */
+.file-list{margin-top:.75rem;display:flex;flex-direction:column;gap:5px}
+.file-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:13px}
+.file-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'JetBrains Mono',monospace;font-size:12px}
+.file-size{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;flex-shrink:0}
+.badge{font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 7px;border-radius:4px;flex-shrink:0}
+.badge-enc{background:var(--purple-bg);color:var(--purple)}
+.badge-dec{background:var(--green-bg);color:var(--green)}
+.remove-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:2px 4px;border-radius:4px;line-height:1;flex-shrink:0;transition:color .1s}
+.remove-btn:hover{color:var(--red)}
+
+/* STATS */
+.stats-row{display:flex;gap:8px;margin-top:.75rem}
+.stat-chip{flex:1;text-align:center;padding:8px 4px;background:var(--bg3);border-radius:8px}
+.stat-val{font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.stat-lbl{font-size:9px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:1px}
+
+/* OTP SECTIONS */
+.otp-note{font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace;margin-bottom:.85rem;line-height:1.65}
+.divider{height:.5px;background:var(--border);margin:.85rem 0}
+.algo-info{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.dot-otp{width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0;animation:pulse 2s infinite}
+
+/* PAD DROP */
+.pad-drop{border:1.5px dashed var(--purple);border-radius:10px;padding:1.5rem 1rem;text-align:center;cursor:pointer;transition:all .15s;position:relative;margin-bottom:.75rem}
+.pad-drop:hover,.pad-drop.drag-over{background:var(--purple-bg)}
+.pad-drop input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.pad-drop-text{font-size:13px;color:var(--text2)}
+.pad-drop-text strong{color:var(--purple);font-weight:700}
+.pad-drop-hint{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:4px;display:block}
+
+/* ACTION */
+.action-btn{width:100%;padding:14px;background:var(--purple);color:var(--text);border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;letter-spacing:-.3px;cursor:pointer;transition:opacity .15s,transform .1s;margin-top:1.25rem}
+.action-btn:hover:not(:disabled){opacity:.88}
+.action-btn:active:not(:disabled){transform:scale(.99)}
+.action-btn:disabled{opacity:.25;cursor:not-allowed;background:var(--bg3);color:var(--text3)}
+
+/* PROGRESS */
+.progress-wrap{display:none;margin-top:1rem}
+.progress-wrap.show{display:block}
+.prog-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.prog-fill{height:100%;background:var(--purple);border-radius:2px;transition:width .1s}
+.prog-status{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+
+/* RESULTS */
+.results-card{display:none;margin-top:1.25rem}
+.result-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:13px;margin-bottom:5px;flex-wrap:wrap}
+.r-icon{font-size:14px;flex-shrink:0}
+.r-name{flex:1;font-family:'JetBrains Mono',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.r-name span{color:var(--text3)}
+.dl-btn{padding:5px 12px;border-radius:7px;font-size:12px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;text-decoration:none;flex-shrink:0;transition:background .1s;white-space:nowrap;border:0.5px solid}
+.dl-file{background:var(--bg2);border-color:var(--border2);color:var(--text)}
+.dl-file:hover{background:var(--bg3)}
+.dl-pad{background:var(--purple-bg);border-color:var(--purple);color:var(--purple)}
+.dl-pad:hover{background:#1f1540}
+
+/* HISTORICAL */
+.history-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:1rem}
+.history-top{padding:1.25rem 1.25rem .85rem;border-bottom:0.5px solid var(--border)}
+.history-eyebrow{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:.4rem}
+.history-title{font-size:16px;font-weight:800;letter-spacing:-.3px;margin-bottom:.6rem}
+.history-body{font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace;line-height:1.8}
+.history-body li{margin-left:1rem;margin-bottom:2px}
+.history-body ul{list-style:disc;padding-left:.5rem}
+.history-bottom{padding:.85rem 1.25rem}
+
+/* COMPARISON TABLE */
+.comp-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:1rem}
+.comp-header{padding:1rem 1.25rem .75rem;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px}
+.comp-icon{font-size:16px}
+.comp-title{font-size:14px;font-weight:800;letter-spacing:-.3px}
+.comp-subtitle{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:1px}
+table.ctable{width:100%;border-collapse:collapse;font-size:12px}
+table.ctable th{padding:8px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);border-bottom:0.5px solid var(--border)}
+table.ctable td{padding:9px 12px;border-bottom:0.5px solid var(--border);vertical-align:middle;font-family:'JetBrains Mono',monospace}
+table.ctable tr:last-child td{border-bottom:none}
+table.ctable td:first-child{color:var(--text2);font-size:11px}
+.td-otp{color:var(--purple);font-weight:600}
+.td-aes{color:var(--green);font-weight:600}
+.td-otp-warn{color:var(--red);font-weight:600}
+.comp-conclusion{padding:.85rem 1.25rem;background:var(--bg3);border-top:0.5px solid var(--border);font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace;line-height:1.6}
+.comp-conclusion strong{color:var(--purple)}
+
+/* SUPPORT */
+.support-section{margin-top:2rem;border:0.5px solid var(--border);border-radius:14px;overflow:hidden}
+.support-top{padding:1.5rem 1.5rem 1.25rem;background:var(--bg2)}
+.support-eyebrow{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:.5rem}
+.support-title{font-size:18px;font-weight:800;letter-spacing:-.5px;margin-bottom:.5rem}
+.support-desc{font-size:13px;color:var(--text2);line-height:1.65;font-family:'JetBrains Mono',monospace}
+.support-bottom{padding:1.25rem 1.5rem;background:var(--bg3);border-top:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.support-features{display:flex;flex-direction:column;gap:6px}
+.support-feat{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+.feat-dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
+.stripe-btn{display:inline-flex;align-items:center;gap:8px;padding:13px 22px;background:var(--purple);color:var(--text);border-radius:10px;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;letter-spacing:-.3px;text-decoration:none;transition:opacity .15s,transform .1s;white-space:nowrap;border:none;cursor:pointer}
+.stripe-btn:hover{opacity:.88}
+
+.footer{margin-top:4rem;text-align:center;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;line-height:1.8}
+
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.card,.banner,.history-card,.comp-card,.support-section{animation:fadein .4s ease both}
+.card:nth-child(2){animation-delay:.04s}.card:nth-child(3){animation-delay:.08s}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LANG -->
+  <div class="lang-bar">
+    <button class="lang-btn active" onclick="setLang('pt')">PT</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('es')">ES</button>
+    <button class="lang-btn" onclick="setLang('fr')">FR</button>
+    <button class="lang-btn" onclick="setLang('de')">DE</button>
+    <button class="lang-btn" onclick="setLang('zh')">中文</button>
+  </div>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="10.5" width="18" height="10" rx="2" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1.5"/>
+          <path d="M7 10.5V7C7 4.79 9.24 3 12 3C14.76 3 17 4.79 17 7V10.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="12" cy="15.5" r="2" fill="white"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>XOR ENC</h1>
+        <div class="logo-sub">One-Time Pad</div>
+      </div>
+    </div>
+    <div class="tagline" id="tagline">// encriptação perfeita · pad único · sem servidor</div>
+  </div>
+
+  <!-- SECURITY BADGE -->
+  <div class="security-badge">
+    <div class="badge-dot"></div>
+    <span id="secBadge">SEGURANÇA PERFEITA · MATEMATICAMENTE INQUEBRÁVEL</span>
+  </div>
+
+  <!-- MAIN WARNING (OTP) -->
+  <div class="banner b-purple">
+    <div class="banner-icon">🔑</div>
+    <div>
+      <div class="banner-title bt-purple" id="otpWarnTitle">SEGURANÇA PERFEITA</div>
+      <div class="banner-text bx-purple" id="otpWarnText">O pad gerado é aleatório e do mesmo tamanho que o ficheiro — matematicamente inquebrável. <strong style="color:var(--purple)">GUARDA o ficheiro .pad em local seguro.</strong> Sem ele, os dados são irrecuperáveis. Nunca reutilizes o mesmo pad em dois ficheiros.</div>
+    </div>
+  </div>
+
+  <!-- PASSPHRASE WARNING -->
+  <div class="banner b-amber">
+    <div class="banner-icon">⚠</div>
+    <div>
+      <div class="banner-title bt-amber" id="ppWarnTitle">NUNCA REUTILIZES O PAD</div>
+      <div class="banner-text bx-amber" id="ppWarnText">Cada pad deve ser usado <strong style="color:var(--amber)">uma única vez</strong>. Reutilizar o mesmo pad em dois ficheiros diferentes destrói completamente a segurança — um atacante pode recuperar os dados com operações simples de XOR entre os dois ficheiros cifrados.</div>
+    </div>
+  </div>
+
+  <!-- FILES CARD -->
+  <div class="card">
+    <div class="card-label" id="lbl-files">Ficheiros</div>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" multiple accept="*/*"/>
+      <span class="drop-icon">⊕</span>
+      <div class="drop-text">
+        <strong id="drop-strong">Arrasta ficheiros aqui</strong><br/>
+        <span id="drop-or">ou clica para selecionar</span>
+      </div>
+      <span class="drop-hint" id="drop-hint">ficheiros .xenc são desencriptados com o pad correto</span>
+    </div>
+    <div class="file-list" id="fileList"></div>
+    <div class="stats-row" id="statsRow" style="display:none">
+      <div class="stat-chip"><div class="stat-val" id="stCount">0</div><div class="stat-lbl" id="stLblFiles">ficheiros</div></div>
+      <div class="stat-chip"><div class="stat-val" id="stSize">0B</div><div class="stat-lbl" id="stLblSize">tamanho</div></div>
+      <div class="stat-chip"><div class="stat-val" id="stEnc">0</div><div class="stat-lbl" id="stLblEnc">encriptar</div></div>
+      <div class="stat-chip"><div class="stat-val" id="stDec">0</div><div class="stat-lbl" id="stLblDec">desencriptar</div></div>
+    </div>
+  </div>
+
+  <!-- OTP PAD CARD -->
+  <div class="card" id="otpPadCard">
+    <div class="card-label" id="lbl-otp-pad">Pad One-Time</div>
+
+    <!-- ENCRYPT NOTE -->
+    <div id="otpEncSection">
+      <div class="otp-note" id="otpEncNote">Ao encriptar, um pad aleatório será gerado automaticamente para cada ficheiro usando entropia criptográfica. Descarrega e guarda o ficheiro <strong style="color:var(--purple)">.pad</strong> — é a única forma de desencriptar.</div>
+      <div class="algo-info">
+        <div class="dot-otp"></div>
+        <span id="algo-otp-text">OTP · crypto.getRandomValues() · pad ≡ tamanho do ficheiro · XOR bit a bit</span>
+      </div>
+    </div>
+
+    <!-- DECRYPT PAD LOAD -->
+    <div id="otpDecSection" style="display:none">
+      <div class="divider" id="decDivider" style="display:none"></div>
+      <div class="otp-note" id="otpDecNote" style="margin-top:.5rem">Para desencriptar carrega o ficheiro <strong style="color:var(--purple)">.pad</strong> correspondente a cada ficheiro <strong>.xenc</strong>.</div>
+      <div class="pad-drop" id="padDropZone">
+        <input type="file" id="padFileInput" multiple accept=".pad"/>
+        <div class="pad-drop-text">
+          <strong id="padDropStrong">Arrasta o ficheiro .pad aqui</strong><br/>
+          <span id="padDropOr">ou clica para selecionar</span>
+        </div>
+        <span class="pad-drop-hint" id="padDropHint">aceita múltiplos .pad para múltiplos ficheiros</span>
+      </div>
+      <div id="padStatusList"></div>
+    </div>
+  </div>
+
+  <button class="action-btn" id="actionBtn" disabled>—</button>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <div class="prog-status" id="progStatus"></div>
+  </div>
+
+  <div class="results-card" id="resultsCard">
+    <div class="card" style="margin-top:0">
+      <div class="card-label" id="lbl-results">Ficheiros Prontos</div>
+      <div id="resultsList"></div>
+    </div>
+  </div>
+
+  <!-- HISTORICAL CURIOSITY -->
+  <div class="history-card">
+    <div class="history-top">
+      <div class="history-eyebrow" id="hist-eyebrow">Curiosidade Histórica</div>
+      <div class="history-title" id="hist-title">💡 OTP na Linha Direta Moscou–Washington (1963)</div>
+      <div class="history-body" id="hist-body">
+        <ul>
+          <li id="h1">Chaves geradas por máquinas de roleta — verdadeira aleatoriedade física</li>
+          <li id="h2">Entregues por correio diplomático entre as duas superpotências</li>
+          <li id="h3">Toda a comunicação usava uma chave única, imediatamente destruída após uso</li>
+        </ul>
+      </div>
+    </div>
+    <div class="history-bottom">
+      <div class="algo-info" style="background:var(--bg4)">
+        <div class="dot-otp"></div>
+        <span id="hist-note">Durante a Guerra Fria, o OTP foi o único sistema de comunicação considerado absolutamente seguro por ambas as partes.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARISON TABLE -->
+  <div class="comp-card">
+    <div class="comp-header">
+      <span class="comp-icon">⚠</span>
+      <div>
+        <div class="comp-title" id="comp-title">Por que NÃO usamos OTP no dia a dia</div>
+        <div class="comp-subtitle" id="comp-sub">OTP vs AES-256 — comparação técnica</div>
+      </div>
+    </div>
+    <table class="ctable">
+      <thead>
+        <tr>
+          <th id="th-char">Característica</th>
+          <th id="th-otp">OTP</th>
+          <th id="th-aes">AES-256</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td id="tr1-c">Segurança</td>
+          <td class="td-otp" id="tr1-otp">Perfeita</td>
+          <td class="td-aes" id="tr1-aes">Muito alta</td>
+        </tr>
+        <tr>
+          <td id="tr2-c">Tamanho da chave</td>
+          <td class="td-otp-warn" id="tr2-otp">= tamanho da mensagem</td>
+          <td class="td-aes" id="tr2-aes">32 bytes</td>
+        </tr>
+        <tr>
+          <td id="tr3-c">Gestão</td>
+          <td class="td-otp-warn" id="tr3-otp">Impossível em escala</td>
+          <td class="td-aes" id="tr3-aes">Prático</td>
+        </tr>
+        <tr>
+          <td id="tr4-c">Velocidade</td>
+          <td class="td-otp" id="tr4-otp">Rápida</td>
+          <td class="td-aes" id="tr4-aes">Rápida</td>
+        </tr>
+        <tr>
+          <td id="tr5-c">Distribuição</td>
+          <td class="td-otp-warn" id="tr5-otp">Canal seguro necessário</td>
+          <td class="td-aes" id="tr5-aes">Diffie-Hellman</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="comp-conclusion">
+      <span id="comp-conclusion">OTP é o <strong>"Santo Graal" teórico da criptografia</strong>, mas tão impraticável que usamos alternativas "quase perfeitas" como AES.</span>
+    </div>
+  </div>
+
+  <!-- SUPPORT -->
+  <div class="support-section">
+    <div class="support-top">
+      <div class="support-eyebrow" id="sup-eyebrow">Projeto de Código Aberto</div>
+      <div class="support-title" id="sup-title">Apoia o Desenvolvimento</div>
+      <div class="support-desc" id="sup-desc">Esta ferramenta é gratuita e funciona 100% no teu browser — sem servidores, sem recolha de dados. Se achaste útil, considera fazer uma contribuição de qualquer valor para manter o projeto vivo.</div>
+    </div>
+    <div class="support-bottom">
+      <div class="support-features">
+        <div class="support-feat"><div class="feat-dot"></div><span id="sf1">Sem publicidade · sem rastreio</span></div>
+        <div class="support-feat"><div class="feat-dot"></div><span id="sf2">100% local, nada sai do teu computador</span></div>
+        <div class="support-feat"><div class="feat-dot"></div><span id="sf3">Paga o que quiseres</span></div>
+      </div>
+      <a class="stripe-btn" href="https://buy.stripe.com/eVq00i49xemXgjJfVufIs00" target="_blank" rel="noopener">
+        <span>♥</span><span id="stripe-lbl">Contribuir</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div id="footer-text">XOR ENC · One-Time Pad · processamento local · sem servidor</div>
+    <div style="margin-top:.4rem">⊕ <span id="footer-xor">todos os dados processados localmente no browser</span></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// TRANSLATIONS
+// ══════════════════════════════════════════════════════
+const T={
+  pt:{
+    tagline:'// encriptação perfeita · pad único · sem servidor',
+    secBadge:'SEGURANÇA PERFEITA · MATEMATICAMENTE INQUEBRÁVEL',
+    otpWarnTitle:'SEGURANÇA PERFEITA',
+    otpWarnText:'O pad gerado é aleatório e do mesmo tamanho que o ficheiro — matematicamente inquebrável. <strong style="color:var(--purple)">GUARDA o ficheiro .pad em local seguro.</strong> Sem ele, os dados são irrecuperáveis. Nunca reutilizes o mesmo pad em dois ficheiros.',
+    ppWarnTitle:'NUNCA REUTILIZES O PAD',
+    ppWarnText:'Cada pad deve ser usado <strong style="color:var(--amber)">uma única vez</strong>. Reutilizar o mesmo pad em dois ficheiros diferentes destrói completamente a segurança — um atacante pode recuperar os dados com operações simples de XOR entre os dois ficheiros cifrados.',
+    lblFiles:'Ficheiros',lblOtpPad:'Pad One-Time',
+    dropStrong:'Arrasta ficheiros aqui',dropOr:'ou clica para selecionar',
+    dropHint:'ficheiros .xenc são desencriptados com o pad correto',
+    stFiles:'ficheiros',stSize:'tamanho',stEnc:'encriptar',stDec:'desencriptar',
+    algoOtp:'OTP · crypto.getRandomValues() · pad ≡ tamanho do ficheiro · XOR bit a bit',
+    otpEncNote:'Ao encriptar, um pad aleatório será gerado automaticamente para cada ficheiro usando entropia criptográfica. Descarrega e guarda o ficheiro .pad — é a única forma de desencriptar.',
+    otpDecNote:'Para desencriptar carrega o ficheiro .pad correspondente a cada ficheiro .xenc.',
+    padDropStrong:'Arrasta o ficheiro .pad aqui',padDropOr:'ou clica para selecionar',
+    padDropHint:'aceita múltiplos .pad para múltiplos ficheiros',
+    btnNoFiles:'Seleciona ficheiros para continuar',btnNoPad:'Carrega o(s) ficheiro(s) .pad',
+    btnEnc:'Encriptar',btnDec:'Desencriptar',btnFile:'ficheiro',btnFiles:'ficheiros',
+    processing:'A processar:',done:'Concluído',of:'de',filesProc:'ficheiro(s) processado(s)',
+    lblResults:'Ficheiros Prontos',dlBtn:'Guardar',dlPad:'Guardar .pad',
+    padLoaded:'pad carregado',padMissing:'pad em falta',
+    histEyebrow:'Curiosidade Histórica',histTitle:'💡 OTP na Linha Direta Moscou–Washington (1963)',
+    h1:'Chaves geradas por máquinas de roleta — verdadeira aleatoriedade física',
+    h2:'Entregues por correio diplomático entre as duas superpotências',
+    h3:'Toda a comunicação usava uma chave única, imediatamente destruída após uso',
+    histNote:'Durante a Guerra Fria, o OTP foi o único sistema de comunicação considerado absolutamente seguro por ambas as partes.',
+    compTitle:'Por que NÃO usamos OTP no dia a dia',compSub:'OTP vs AES-256 — comparação técnica',
+    thChar:'Característica',thOtp:'OTP',thAes:'AES-256',
+    tr1c:'Segurança',tr1otp:'Perfeita',tr1aes:'Muito alta',
+    tr2c:'Tamanho da chave',tr2otp:'= tamanho da mensagem',tr2aes:'32 bytes',
+    tr3c:'Gestão',tr3otp:'Impossível em escala',tr3aes:'Prático',
+    tr4c:'Velocidade',tr4otp:'Rápida',tr4aes:'Rápida',
+    tr5c:'Distribuição',tr5otp:'Canal seguro necessário',tr5aes:'Diffie-Hellman',
+    conclusion:'OTP é o <strong>"Santo Graal" teórico da criptografia</strong>, mas tão impraticável que usamos alternativas "quase perfeitas" como AES.',
+    supEyebrow:'Projeto de Código Aberto',supTitle:'Apoia o Desenvolvimento',
+    supDesc:'Esta ferramenta é gratuita e funciona 100% no teu browser — sem servidores, sem recolha de dados. Se achaste útil, considera fazer uma contribuição de qualquer valor para manter o projeto vivo.',
+    sf1:'Sem publicidade · sem rastreio',sf2:'100% local, nada sai do teu computador',sf3:'Paga o que quiseres',
+    stripeBtn:'Contribuir',footerText:'XOR ENC · One-Time Pad · processamento local · sem servidor',footerXor:'todos os dados processados localmente no browser',
+  },
+  en:{
+    tagline:'// perfect encryption · single-use pad · no server',
+    secBadge:'PERFECT SECURITY · MATHEMATICALLY UNBREAKABLE',
+    otpWarnTitle:'PERFECT SECURITY',
+    otpWarnText:'The generated pad is random and the same size as the file — mathematically unbreakable. <strong style="color:var(--purple)">SAVE the .pad file in a safe place.</strong> Without it, data is unrecoverable. Never reuse the same pad for two files.',
+    ppWarnTitle:'NEVER REUSE THE PAD',
+    ppWarnText:'Each pad must be used <strong style="color:var(--amber)">only once</strong>. Reusing the same pad for two different files completely destroys security — an attacker can recover the data using simple XOR operations between the two encrypted files.',
+    lblFiles:'Files',lblOtpPad:'One-Time Pad',
+    dropStrong:'Drag files here',dropOr:'or click to select',
+    dropHint:'.xenc files are decrypted with the correct pad',
+    stFiles:'files',stSize:'size',stEnc:'encrypt',stDec:'decrypt',
+    algoOtp:'OTP · crypto.getRandomValues() · pad ≡ file size · bitwise XOR',
+    otpEncNote:'When encrypting, a random pad will be generated automatically for each file using cryptographic entropy. Download and save the .pad file — it is the only way to decrypt.',
+    otpDecNote:'To decrypt, load the .pad file corresponding to each .xenc file.',
+    padDropStrong:'Drag .pad file here',padDropOr:'or click to select',
+    padDropHint:'accepts multiple .pad files for multiple files',
+    btnNoFiles:'Select files to continue',btnNoPad:'Load the .pad file(s)',
+    btnEnc:'Encrypt',btnDec:'Decrypt',btnFile:'file',btnFiles:'files',
+    processing:'Processing:',done:'Done',of:'of',filesProc:'file(s) processed',
+    lblResults:'Ready Files',dlBtn:'Save',dlPad:'Save .pad',
+    padLoaded:'pad loaded',padMissing:'pad missing',
+    histEyebrow:'Historical Curiosity',histTitle:'💡 OTP on the Moscow–Washington Hotline (1963)',
+    h1:'Keys generated by roulette machines — true physical randomness',
+    h2:'Delivered by diplomatic courier between the two superpowers',
+    h3:'Every communication used a unique key, immediately destroyed after use',
+    histNote:'During the Cold War, OTP was the only communication system considered absolutely secure by both sides.',
+    compTitle:'Why we do NOT use OTP in everyday life',compSub:'OTP vs AES-256 — technical comparison',
+    thChar:'Feature',thOtp:'OTP',thAes:'AES-256',
+    tr1c:'Security',tr1otp:'Perfect',tr1aes:'Very high',
+    tr2c:'Key size',tr2otp:'= message size',tr2aes:'32 bytes',
+    tr3c:'Management',tr3otp:'Impossible at scale',tr3aes:'Practical',
+    tr4c:'Speed',tr4otp:'Fast',tr4aes:'Fast',
+    tr5c:'Distribution',tr5otp:'Secure channel required',tr5aes:'Diffie-Hellman',
+    conclusion:'OTP is the theoretical <strong>"Holy Grail" of cryptography</strong>, but so impractical that we use "near-perfect" alternatives like AES.',
+    supEyebrow:'Open Source Project',supTitle:'Support the Development',
+    supDesc:'This tool is free and runs 100% in your browser — no servers, no data collection. If you found it useful, consider contributing any amount to keep the project alive.',
+    sf1:'No ads · no tracking',sf2:'100% local, nothing leaves your computer',sf3:'Pay what you want',
+    stripeBtn:'Contribute',footerText:'XOR ENC · One-Time Pad · local processing · no server',footerXor:'all data processed locally in the browser',
+  },
+  es:{
+    tagline:'// cifrado perfecto · pad único · sin servidor',
+    secBadge:'SEGURIDAD PERFECTA · MATEMÁTICAMENTE IRROMPIBLE',
+    otpWarnTitle:'SEGURIDAD PERFECTA',
+    otpWarnText:'El pad generado es aleatorio y del mismo tamaño que el archivo — matemáticamente irrompible. <strong style="color:var(--purple)">GUARDA el archivo .pad en un lugar seguro.</strong> Sin él, los datos son irrecuperables. Nunca reutilices el mismo pad para dos archivos.',
+    ppWarnTitle:'NUNCA REUTILICES EL PAD',
+    ppWarnText:'Cada pad debe usarse <strong style="color:var(--amber)">una única vez</strong>. Reutilizar el mismo pad para dos archivos destruye completamente la seguridad — un atacante puede recuperar los datos con operaciones XOR simples entre los dos archivos cifrados.',
+    lblFiles:'Archivos',lblOtpPad:'Pad de Un Solo Uso',
+    dropStrong:'Arrastra archivos aquí',dropOr:'o haz clic para seleccionar',
+    dropHint:'los archivos .xenc se descifran con el pad correcto',
+    stFiles:'archivos',stSize:'tamaño',stEnc:'cifrar',stDec:'descifrar',
+    algoOtp:'OTP · crypto.getRandomValues() · pad ≡ tamaño del archivo · XOR bit a bit',
+    otpEncNote:'Al cifrar, se generará automáticamente un pad aleatorio para cada archivo. Descarga y guarda el archivo .pad — es la única forma de descifrar.',
+    otpDecNote:'Para descifrar, carga el archivo .pad correspondiente a cada archivo .xenc.',
+    padDropStrong:'Arrastra el archivo .pad aquí',padDropOr:'o haz clic para seleccionar',
+    padDropHint:'acepta múltiples .pad para múltiples archivos',
+    btnNoFiles:'Selecciona archivos para continuar',btnNoPad:'Carga el(los) archivo(s) .pad',
+    btnEnc:'Cifrar',btnDec:'Descifrar',btnFile:'archivo',btnFiles:'archivos',
+    processing:'Procesando:',done:'Listo',of:'de',filesProc:'archivo(s) procesado(s)',
+    lblResults:'Archivos Listos',dlBtn:'Guardar',dlPad:'Guardar .pad',
+    padLoaded:'pad cargado',padMissing:'pad faltante',
+    histEyebrow:'Curiosidad Histórica',histTitle:'💡 OTP en la Línea Directa Moscú–Washington (1963)',
+    h1:'Claves generadas por máquinas de ruleta — aleatoriedad física real',
+    h2:'Entregadas por correo diplomático entre las dos superpotencias',
+    h3:'Toda comunicación usaba una clave única, destruida inmediatamente',
+    histNote:'Durante la Guerra Fría, el OTP fue el único sistema de comunicación considerado absolutamente seguro por ambas partes.',
+    compTitle:'Por qué NO usamos OTP en el día a día',compSub:'OTP vs AES-256 — comparación técnica',
+    thChar:'Característica',thOtp:'OTP',thAes:'AES-256',
+    tr1c:'Seguridad',tr1otp:'Perfecta',tr1aes:'Muy alta',
+    tr2c:'Tamaño de clave',tr2otp:'= tamaño del mensaje',tr2aes:'32 bytes',
+    tr3c:'Gestión',tr3otp:'Imposible a escala',tr3aes:'Práctico',
+    tr4c:'Velocidad',tr4otp:'Rápida',tr4aes:'Rápida',
+    tr5c:'Distribución',tr5otp:'Canal seguro necesario',tr5aes:'Diffie-Hellman',
+    conclusion:'El OTP es el <strong>"Santo Grial" teórico de la criptografía</strong>, pero tan impráctic que usamos alternativas "casi perfectas" como AES.',
+    supEyebrow:'Proyecto de Código Abierto',supTitle:'Apoya el Desarrollo',
+    supDesc:'Esta herramienta es gratuita y funciona 100% en tu navegador — sin servidores, sin recopilación de datos.',
+    sf1:'Sin anuncios · sin rastreo',sf2:'100% local, nada sale de tu ordenador',sf3:'Paga lo que quieras',
+    stripeBtn:'Contribuir',footerText:'XOR ENC · One-Time Pad · procesamiento local · sin servidor',footerXor:'todos los datos procesados localmente',
+  },
+  fr:{
+    tagline:'// chiffrement parfait · pad unique · sans serveur',
+    secBadge:'SÉCURITÉ PARFAITE · MATHÉMATIQUEMENT INCASSABLE',
+    otpWarnTitle:'SÉCURITÉ PARFAITE',
+    otpWarnText:'Le pad généré est aléatoire et de la même taille que le fichier — mathématiquement incassable. <strong style="color:var(--purple)">SAUVEGARDEZ le fichier .pad en lieu sûr.</strong> Sans lui, les données sont irrécupérables. Ne réutilisez jamais le même pad.',
+    ppWarnTitle:'NE RÉUTILISEZ JAMAIS LE PAD',
+    ppWarnText:'Chaque pad doit être utilisé <strong style="color:var(--amber)">une seule fois</strong>. Réutiliser le même pad pour deux fichiers détruit complètement la sécurité — un attaquant peut récupérer les données par de simples opérations XOR.',
+    lblFiles:'Fichiers',lblOtpPad:'Pad à Usage Unique',
+    dropStrong:'Glissez les fichiers ici',dropOr:'ou cliquez pour sélectionner',
+    dropHint:'les fichiers .xenc sont déchiffrés avec le pad correct',
+    stFiles:'fichiers',stSize:'taille',stEnc:'chiffrer',stDec:'déchiffrer',
+    algoOtp:'OTP · crypto.getRandomValues() · pad ≡ taille du fichier · XOR bit à bit',
+    otpEncNote:'Lors du chiffrement, un pad aléatoire sera généré pour chaque fichier. Téléchargez et sauvegardez le fichier .pad — c\'est le seul moyen de déchiffrer.',
+    otpDecNote:'Pour déchiffrer, chargez le fichier .pad correspondant à chaque fichier .xenc.',
+    padDropStrong:'Glissez le fichier .pad ici',padDropOr:'ou cliquez pour sélectionner',
+    padDropHint:'accepte plusieurs .pad pour plusieurs fichiers',
+    btnNoFiles:'Sélectionnez des fichiers pour continuer',btnNoPad:'Chargez le(s) fichier(s) .pad',
+    btnEnc:'Chiffrer',btnDec:'Déchiffrer',btnFile:'fichier',btnFiles:'fichiers',
+    processing:'Traitement :',done:'Terminé',of:'sur',filesProc:'fichier(s) traité(s)',
+    lblResults:'Fichiers Prêts',dlBtn:'Enregistrer',dlPad:'Enregistrer .pad',
+    padLoaded:'pad chargé',padMissing:'pad manquant',
+    histEyebrow:'Curiosité Historique',histTitle:'💡 OTP sur la Ligne Directe Moscou–Washington (1963)',
+    h1:'Clés générées par des machines à roulette — aléatoire physique véritable',
+    h2:'Livrées par courrier diplomatique entre les deux superpuissances',
+    h3:'Toute communication utilisait une clé unique, immédiatement détruite',
+    histNote:'Pendant la Guerre Froide, le OTP était le seul système de communication considéré absolument sûr par les deux parties.',
+    compTitle:'Pourquoi on n\'utilise PAS l\'OTP au quotidien',compSub:'OTP vs AES-256 — comparaison technique',
+    thChar:'Caractéristique',thOtp:'OTP',thAes:'AES-256',
+    tr1c:'Sécurité',tr1otp:'Parfaite',tr1aes:'Très haute',
+    tr2c:'Taille de clé',tr2otp:'= taille du message',tr2aes:'32 octets',
+    tr3c:'Gestion',tr3otp:'Impossible à l\'échelle',tr3aes:'Pratique',
+    tr4c:'Vitesse',tr4otp:'Rapide',tr4aes:'Rapide',
+    tr5c:'Distribution',tr5otp:'Canal sécurisé requis',tr5aes:'Diffie-Hellman',
+    conclusion:'L\'OTP est le <strong>"Saint Graal" théorique de la cryptographie</strong>, mais si impraticable qu\'on utilise des alternatives "presque parfaites" comme AES.',
+    supEyebrow:'Projet Open Source',supTitle:'Soutenir le Développement',
+    supDesc:'Cet outil est gratuit et fonctionne 100% dans votre navigateur — sans serveurs, sans collecte de données.',
+    sf1:'Sans publicité · sans suivi',sf2:'100% local, rien ne quitte votre ordinateur',sf3:'Payez ce que vous voulez',
+    stripeBtn:'Contribuer',footerText:'XOR ENC · One-Time Pad · traitement local · sans serveur',footerXor:'toutes les données traitées localement',
+  },
+  de:{
+    tagline:'// perfekte Verschlüsselung · Einmal-Pad · kein Server',
+    secBadge:'PERFEKTE SICHERHEIT · MATHEMATISCH UNKNACKBAR',
+    otpWarnTitle:'PERFEKTE SICHERHEIT',
+    otpWarnText:'Der erzeugte Pad ist zufällig und gleich groß wie die Datei — mathematisch unknackbar. <strong style="color:var(--purple)">SPEICHERE die .pad-Datei sicher.</strong> Ohne sie sind die Daten nicht wiederherstellbar. Verwende denselben Pad niemals zweimal.',
+    ppWarnTitle:'NIEMALS DEN PAD WIEDERVERWENDEN',
+    ppWarnText:'Jeder Pad darf <strong style="color:var(--amber)">nur einmal</strong> verwendet werden. Die Wiederverwendung desselben Pads für zwei Dateien zerstört die Sicherheit vollständig — ein Angreifer kann die Daten durch einfache XOR-Operationen zwischen den beiden verschlüsselten Dateien wiederherstellen.',
+    lblFiles:'Dateien',lblOtpPad:'Einmal-Pad (OTP)',
+    dropStrong:'Dateien hierher ziehen',dropOr:'oder klicken zum Auswählen',
+    dropHint:'.xenc-Dateien werden mit dem richtigen Pad entschlüsselt',
+    stFiles:'Dateien',stSize:'Größe',stEnc:'verschlüsseln',stDec:'entschlüsseln',
+    algoOtp:'OTP · crypto.getRandomValues() · Pad ≡ Dateigröße · bitweises XOR',
+    otpEncNote:'Beim Verschlüsseln wird automatisch ein zufälliger Pad erzeugt. Lade die .pad-Datei herunter und bewahre sie sicher auf — sie ist der einzige Weg zur Entschlüsselung.',
+    otpDecNote:'Zum Entschlüsseln lade die .pad-Datei, die zu jeder .xenc-Datei gehört.',
+    padDropStrong:'.pad-Datei hierher ziehen',padDropOr:'oder klicken zum Auswählen',
+    padDropHint:'akzeptiert mehrere .pad-Dateien',
+    btnNoFiles:'Dateien auswählen um fortzufahren',btnNoPad:'.pad-Datei(en) laden',
+    btnEnc:'Verschlüsseln',btnDec:'Entschlüsseln',btnFile:'Datei',btnFiles:'Dateien',
+    processing:'Verarbeite:',done:'Fertig',of:'von',filesProc:'Datei(en) verarbeitet',
+    lblResults:'Fertige Dateien',dlBtn:'Speichern',dlPad:'.pad speichern',
+    padLoaded:'Pad geladen',padMissing:'Pad fehlt',
+    histEyebrow:'Historische Kuriosität',histTitle:'💡 OTP auf dem Moskau–Washington-Draht (1963)',
+    h1:'Schlüssel von Rouletterädern erzeugt — echte physische Zufälligkeit',
+    h2:'Per diplomatischem Kurier zwischen den Supermächten geliefert',
+    h3:'Jede Kommunikation nutzte einen einzigartigen Schlüssel, sofort vernichtet',
+    histNote:'Im Kalten Krieg war OTP das einzige Kommunikationssystem, das beide Seiten als absolut sicher betrachteten.',
+    compTitle:'Warum wir OTP im Alltag NICHT nutzen',compSub:'OTP vs AES-256 — technischer Vergleich',
+    thChar:'Merkmal',thOtp:'OTP',thAes:'AES-256',
+    tr1c:'Sicherheit',tr1otp:'Perfekt',tr1aes:'Sehr hoch',
+    tr2c:'Schlüsselgröße',tr2otp:'= Nachrichtengröße',tr2aes:'32 Bytes',
+    tr3c:'Verwaltung',tr3otp:'Unmöglich bei Skalierung',tr3aes:'Praktisch',
+    tr4c:'Geschwindigkeit',tr4otp:'Schnell',tr4aes:'Schnell',
+    tr5c:'Verteilung',tr5otp:'Sicherer Kanal nötig',tr5aes:'Diffie-Hellman',
+    conclusion:'OTP ist der theoretische <strong>"Heilige Gral der Kryptografie"</strong>, aber so unpraktisch, dass wir "nahezu perfekte" Alternativen wie AES verwenden.',
+    supEyebrow:'Open-Source-Projekt',supTitle:'Entwicklung unterstützen',
+    supDesc:'Dieses Tool ist kostenlos und läuft 100% in deinem Browser — keine Server, keine Datenerfassung.',
+    sf1:'Keine Werbung · kein Tracking',sf2:'100% lokal, nichts verlässt deinen Computer',sf3:'Zahle was du willst',
+    stripeBtn:'Beitragen',footerText:'XOR ENC · One-Time Pad · lokale Verarbeitung · kein Server',footerXor:'alle Daten lokal verarbeitet',
+  },
+  zh:{
+    tagline:'// 完美加密 · 一次性密码本 · 无服务器',
+    secBadge:'完美安全 · 数学上无法破解',
+    otpWarnTitle:'完美安全性',
+    otpWarnText:'生成的密码本是随机的，与文件大小相同——在数学上无法破解。<strong style="color:var(--purple)">请将 .pad 文件保存在安全的地方。</strong>没有它，数据将无法恢复。切勿对两个文件重复使用同一密码本。',
+    ppWarnTitle:'切勿重复使用密码本',
+    ppWarnText:'每个密码本只能使用<strong style="color:var(--amber)">一次</strong>。对两个不同的文件重复使用同一密码本会完全破坏安全性——攻击者可以通过对两个加密文件进行简单的 XOR 运算来恢复数据。',
+    lblFiles:'文件',lblOtpPad:'一次性密码本',
+    dropStrong:'将文件拖到此处',dropOr:'或点击选择',
+    dropHint:'.xenc 文件将用正确的密码本解密',
+    stFiles:'文件',stSize:'大小',stEnc:'加密',stDec:'解密',
+    algoOtp:'OTP · crypto.getRandomValues() · 密码本 ≡ 文件大小 · 逐位 XOR',
+    otpEncNote:'加密时，将使用密码学熵自动为每个文件生成随机密码本。下载并保存 .pad 文件——这是解密的唯一方式。',
+    otpDecNote:'解密时，加载与每个 .xenc 文件对应的 .pad 文件。',
+    padDropStrong:'将 .pad 文件拖到此处',padDropOr:'或点击选择',
+    padDropHint:'接受多个 .pad 文件',
+    btnNoFiles:'请选择文件以继续',btnNoPad:'请加载 .pad 文件',
+    btnEnc:'加密',btnDec:'解密',btnFile:'个文件',btnFiles:'个文件',
+    processing:'处理中:',done:'完成',of:'/',filesProc:'个文件已处理',
+    lblResults:'已处理文件',dlBtn:'保存',dlPad:'保存 .pad',
+    padLoaded:'密码本已加载',padMissing:'密码本缺失',
+    histEyebrow:'历史趣闻',histTitle:'💡 OTP 在莫斯科-华盛顿热线上的应用（1963年）',
+    h1:'密钥由轮盘机器生成——真正的物理随机性',
+    h2:'通过两个超级大国之间的外交信使传递',
+    h3:'每次通信使用唯一密钥，使用后立即销毁',
+    histNote:'冷战期间，OTP 是双方都认为绝对安全的唯一通信系统。',
+    compTitle:'为什么我们日常不使用 OTP',compSub:'OTP vs AES-256 — 技术比较',
+    thChar:'特征',thOtp:'OTP',thAes:'AES-256',
+    tr1c:'安全性',tr1otp:'完美',tr1aes:'非常高',
+    tr2c:'密钥大小',tr2otp:'= 消息大小',tr2aes:'32 字节',
+    tr3c:'管理',tr3otp:'规模化不可行',tr3aes:'实用',
+    tr4c:'速度',tr4otp:'快速',tr4aes:'快速',
+    tr5c:'分发',tr5otp:'需要安全信道',tr5aes:'Diffie-Hellman',
+    conclusion:'OTP 是密码学理论上的<strong>"圣杯"</strong>，但其不实用性使我们转而使用 AES 等"近乎完美"的替代方案。',
+    supEyebrow:'开源项目',supTitle:'支持开发',
+    supDesc:'此工具免费使用，100% 在您的浏览器中运行 — 无服务器，不收集数据。',
+    sf1:'无广告 · 无追踪',sf2:'100% 本地处理，没有数据离开您的电脑',sf3:'随意付款',
+    stripeBtn:'捐助',footerText:'XOR ENC · 一次性密码本 · 本地处理 · 无服务器',footerXor:'所有数据在浏览器中本地处理',
+  },
+};
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let lang='pt', files=[], padFiles={};
+
+function fmt(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(2)+'MB'}
+function isXenc(n){return n.toLowerCase().endsWith('.xenc')}
+function isPad(n){return n.toLowerCase().endsWith('.pad')}
+function outName(n){return isXenc(n)?n.slice(0,-5):n+'.xenc'}
+
+function xorOtp(buf,padBuf){
+  const out=new Uint8Array(buf.byteLength),v=new Uint8Array(buf),p=new Uint8Array(padBuf);
+  for(let i=0;i<v.length;i++)out[i]=v[i]^p[i];
+  return out;
+}
+
+// ══════════════════════════════════════════════════════
+// LANGUAGE
+// ══════════════════════════════════════════════════════
+function setLang(l){
+  lang=l;
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="setLang('${l}')"]`).classList.add('active');
+  const t=T[l];
+  const simple=['tagline','secBadge','otpWarnTitle','ppWarnTitle','ppWarnText',
+    'lblFiles','lbl-otp-pad','drop-strong','drop-or','drop-hint',
+    'stLblFiles','stLblSize','stLblEnc','stLblDec',
+    'algo-otp-text','otpEncNote','otpDecNote','padDropStrong','padDropOr','padDropHint',
+    'lbl-results','hist-eyebrow','hist-title','h1','h2','h3','hist-note',
+    'comp-title','comp-sub','th-char','th-otp','th-aes',
+    'tr1-c','tr1-otp','tr1-aes','tr2-c','tr2-otp','tr2-aes',
+    'tr3-c','tr3-otp','tr3-aes','tr4-c','tr4-otp','tr4-aes','tr5-c','tr5-otp','tr5-aes',
+    'sup-eyebrow','sup-title','sup-desc','sf1','sf2','sf3','stripe-lbl','footer-text','footer-xor'];
+
+  const map={tagline:'tagline',secBadge:'secBadge',
+    otpWarnTitle:'otpWarnTitle',ppWarnTitle:'ppWarnTitle',ppWarnText:'ppWarnText',
+    lblFiles:'lbl-files',lblOtpPad:'lbl-otp-pad',
+    dropStrong:'drop-strong',dropOr:'drop-or',dropHint:'drop-hint',
+    stFiles:'stLblFiles',stSize:'stLblSize',stEnc:'stLblEnc',stDec:'stLblDec',
+    algoOtp:'algo-otp-text',otpEncNote:'otpEncNote',otpDecNote:'otpDecNote',
+    padDropStrong:'padDropStrong',padDropOr:'padDropOr',padDropHint:'padDropHint',
+    lblResults:'lbl-results',
+    histEyebrow:'hist-eyebrow',histTitle:'hist-title',h1:'h1',h2:'h2',h3:'h3',histNote:'hist-note',
+    compTitle:'comp-title',compSub:'comp-sub',
+    thChar:'th-char',thOtp:'th-otp',thAes:'th-aes',
+    tr1c:'tr1-c',tr1otp:'tr1-otp',tr1aes:'tr1-aes',
+    tr2c:'tr2-c',tr2otp:'tr2-otp',tr2aes:'tr2-aes',
+    tr3c:'tr3-c',tr3otp:'tr3-otp',tr3aes:'tr3-aes',
+    tr4c:'tr4-c',tr4otp:'tr4-otp',tr4aes:'tr4-aes',
+    tr5c:'tr5-c',tr5otp:'tr5-otp',tr5aes:'tr5-aes',
+    supEyebrow:'sup-eyebrow',supTitle:'sup-title',supDesc:'sup-desc',
+    sf1:'sf1',sf2:'sf2',sf3:'sf3',stripeBtn:'stripe-lbl',
+    footerText:'footer-text',footerXor:'footer-xor'};
+
+  const htmlKeys=new Set(['otpWarnText','ppWarnText','conclusion']);
+  for(const[k,id]of Object.entries(map)){
+    const el=document.getElementById(id);if(!el||!(k in t))continue;
+    el.textContent=t[k];
+  }
+  // html fields
+  const owEl=document.getElementById('otpWarnText');if(owEl)owEl.innerHTML=t.otpWarnText;
+  const ppEl=document.getElementById('ppWarnText');if(ppEl)ppEl.innerHTML=t.ppWarnText;
+  const ccEl=document.getElementById('comp-conclusion');if(ccEl)ccEl.innerHTML=t.conclusion;
+  renderPadStatus();updateBtn();
+}
+
+// ══════════════════════════════════════════════════════
+// FILE RENDER
+// ══════════════════════════════════════════════════════
+function updateOtpView(){
+  const hasEnc=files.some(f=>!isXenc(f.name));
+  const hasDec=files.some(f=>isXenc(f.name));
+  document.getElementById('otpEncSection').style.display=hasEnc||!hasDec?'block':'none';
+  document.getElementById('otpDecSection').style.display=hasDec?'block':'none';
+  document.getElementById('decDivider').style.display=hasEnc&&hasDec?'block':'none';
+  renderPadStatus();
+}
+
+function renderFiles(){
+  const fl=document.getElementById('fileList');fl.innerHTML='';
+  const t=T[lang];
+  if(!files.length){document.getElementById('statsRow').style.display='none';updateOtpView();return}
+  document.getElementById('statsRow').style.display='flex';
+  document.getElementById('stCount').textContent=files.length;
+  document.getElementById('stSize').textContent=fmt(files.reduce((a,f)=>a+f.size,0));
+  document.getElementById('stEnc').textContent=files.filter(f=>!isXenc(f.name)).length;
+  document.getElementById('stDec').textContent=files.filter(f=>isXenc(f.name)).length;
+  files.forEach((f,i)=>{
+    const dec=isXenc(f.name);
+    const d=document.createElement('div');d.className='file-item';
+    d.innerHTML=`<span class="file-name" title="${f.name}">${f.name}</span>
+      <span class="file-size">${fmt(f.size)}</span>
+      <span class="badge ${dec?'badge-dec':'badge-enc'}">${dec?t.stDec.toUpperCase():t.stEnc.toUpperCase()}</span>
+      <button class="remove-btn" data-i="${i}">×</button>`;
+    fl.appendChild(d);
+  });
+  fl.querySelectorAll('.remove-btn').forEach(b=>b.addEventListener('click',()=>{
+    files.splice(+b.dataset.i,1);renderFiles();updateBtn();
+  }));
+  updateOtpView();
+}
+
+function renderPadStatus(){
+  const t=T[lang];
+  const list=document.getElementById('padStatusList');if(!list)return;list.innerHTML='';
+  files.filter(f=>isXenc(f.name)).forEach(f=>{
+    const base=f.name.slice(0,-5);const has=!!padFiles[base];
+    const d=document.createElement('div');
+    d.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border-radius:8px;margin-bottom:5px;font-size:12px;font-family:JetBrains Mono,monospace';
+    d.innerHTML=`<span style="color:${has?'var(--green)':'var(--red)'}">${has?'✓':'✗'}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)">${f.name}</span>
+      <span style="font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700;background:${has?'var(--green-bg)':'var(--red-bg)'};color:${has?'var(--green)':'var(--red)'}">${has?t.padLoaded.toUpperCase():t.padMissing.toUpperCase()}</span>
+      ${has?`<button onclick="removePad('${base.replace(/'/g,"\\'")}');event.stopPropagation()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 4px;border-radius:4px;line-height:1;transition:color .1s" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">×</button>`:''}`;
+    list.appendChild(d);
+  });
+}
+
+function removePad(base){delete padFiles[base];renderPadStatus();updateBtn()}
+
+// ══════════════════════════════════════════════════════
+// BUTTON STATE
+// ══════════════════════════════════════════════════════
+function updateBtn(){
+  const t=T[lang];
+  const btn=document.getElementById('actionBtn');
+  const hasF=files.length>0;
+  const dec=files.filter(f=>isXenc(f.name)).length;
+  const enc=files.filter(f=>!isXenc(f.name)).length;
+  const allPads=files.filter(f=>isXenc(f.name)).every(f=>padFiles[f.name.slice(0,-5)]);
+  btn.disabled=!(hasF&&(dec===0||allPads));
+  if(!hasF){btn.textContent=t.btnNoFiles;return}
+  if(dec>0&&!allPads){btn.textContent=t.btnNoPad;return}
+  const parts=[];
+  if(enc>0)parts.push(`${t.btnEnc} ${enc}`);
+  if(dec>0)parts.push(`${t.btnDec} ${dec}`);
+  btn.textContent=parts.join(' · ')+' '+(files.length===1?t.btnFile:t.btnFiles);
+}
+
+// ══════════════════════════════════════════════════════
+// PROCESS
+// ══════════════════════════════════════════════════════
+async function process(){
+  const t=T[lang];
+  const btn=document.getElementById('actionBtn');
+  btn.disabled=true;
+  document.getElementById('resultsList').innerHTML='';
+  document.getElementById('resultsCard').style.display='none';
+  const pw=document.getElementById('progressWrap');pw.classList.add('show');
+  const pf=document.getElementById('progFill'),ps=document.getElementById('progStatus');
+  const results=[];
+  for(let i=0;i<files.length;i++){
+    const f=files[i];
+    pf.style.width=Math.round(i/files.length*100)+'%';
+    ps.textContent=`${t.processing} ${f.name} (${i+1} ${t.of} ${files.length})`;
+    try{
+      const buf=await f.arrayBuffer();
+      if(!isXenc(f.name)){
+        // ENCRYPT
+        const pad=new Uint8Array(buf.byteLength);
+        crypto.getRandomValues(pad);
+        const out=xorOtp(buf,pad.buffer);
+        const ename=outName(f.name);
+        const pname=f.name+'.pad';
+        results.push({name:ename,url:URL.createObjectURL(new Blob([out])),size:out.length,dec:false,
+          padName:pname,padUrl:URL.createObjectURL(new Blob([pad])),padSize:pad.length});
+      } else {
+        // DECRYPT
+        const base=f.name.slice(0,-5);
+        const padFile=padFiles[base];
+        if(!padFile)throw new Error('missing .pad');
+        const padBuf=await padFile.arrayBuffer();
+        if(padBuf.byteLength<buf.byteLength)throw new Error('pad too small');
+        const out=xorOtp(buf,padBuf);
+        results.push({name:outName(f.name),url:URL.createObjectURL(new Blob([out])),size:out.length,dec:true});
+      }
+    }catch(e){results.push({name:f.name,err:e.message})}
+  }
+  pf.style.width='100%';
+  ps.textContent=`${t.done} — ${results.length} ${t.filesProc}`;
+  setTimeout(()=>{pw.classList.remove('show');pf.style.width='0%'},1600);
+  const rl=document.getElementById('resultsList');
+  results.forEach(r=>{
+    const d=document.createElement('div');d.className='result-item';
+    if(r.err){
+      d.innerHTML=`<span class="r-icon">✕</span><span class="r-name" style="color:var(--red)">${r.name} — ${r.err}</span>`;
+    } else {
+      let btns=`<a class="dl-btn dl-file" href="${r.url}" download="${r.name}">${t.dlBtn}</a>`;
+      if(r.padUrl)btns+=`<a class="dl-btn dl-pad" href="${r.padUrl}" download="${r.padName}">${t.dlPad}</a>`;
+      d.innerHTML=`<span class="r-icon">${r.dec?'🔓':'🔒'}</span>
+        <span class="r-name">${r.name} <span>(${fmt(r.size)})</span></span>${btns}`;
+    }
+    rl.appendChild(d);
+  });
+  document.getElementById('resultsCard').style.display='block';
+  btn.disabled=false;updateBtn();
+}
+
+// ══════════════════════════════════════════════════════
+// EVENTS
+// ══════════════════════════════════════════════════════
+const fi=document.getElementById('fileInput'),dz=document.getElementById('dropZone');
+fi.addEventListener('change',()=>{Array.from(fi.files).forEach(f=>{if(!isPad(f.name))files.push(f)});fi.value='';renderFiles();updateBtn()});
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');Array.from(e.dataTransfer.files).forEach(f=>{if(!isPad(f.name))files.push(f)});renderFiles();updateBtn()});
+
+const pfi=document.getElementById('padFileInput'),pdz=document.getElementById('padDropZone');
+pfi.addEventListener('change',()=>{
+  Array.from(pfi.files).forEach(f=>{if(isPad(f.name))padFiles[f.name.slice(0,-4)]=f});
+  pfi.value='';renderPadStatus();updateBtn();
+});
+pdz.addEventListener('dragover',e=>{e.preventDefault();pdz.classList.add('drag-over')});
+pdz.addEventListener('dragleave',()=>pdz.classList.remove('drag-over'));
+pdz.addEventListener('drop',e=>{
+  e.preventDefault();pdz.classList.remove('drag-over');
+  Array.from(e.dataTransfer.files).forEach(f=>{if(isPad(f.name))padFiles[f.name.slice(0,-4)]=f});
+  renderPadStatus();updateBtn();
+});
+
+document.getElementById('actionBtn').addEventListener('click',process);
+setLang('pt');
+</script>
+</body>
+</html>
